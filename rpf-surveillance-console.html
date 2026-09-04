@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPF Surveillance — Telemetry & Threat Tracking Console</title>
+  
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="chart.umd.js"></script>
+  <script>if (typeof Chart === 'undefined') { document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>'); }</script>
+
+  <style>
+    :root, [data-theme="dark"] {
+      --bg-app: #030407;
+      --bg-surface: rgba(18, 20, 26, 0.7);
+      --bg-surface-hover: rgba(28, 32, 42, 0.85);
+      --bg-glass-card: rgba(18, 22, 31, 0.6);
+      --bg-subtle: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.2);
+      --border-glow: rgba(0, 112, 243, 0.3);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --brand-blue: #0070f3;
+      --brand-blue-glow: rgba(0, 112, 243, 0.25);
+      --status-success: #10b981;
+      --status-warning: #f59e0b;
+      --status-danger: #ef4444;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'Geist Mono', monospace;
+
+      --console-bg: #090d16;
+      --console-text: #e2e8f0;
+      --console-border: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="light"] {
+      --bg-app: #f1f5f9;
+      --bg-surface: rgba(255, 255, 255, 0.85);
+      --bg-surface-hover: rgba(255, 255, 255, 0.98);
+      --bg-glass-card: #ffffff;
+      --bg-subtle: #f8fafc;
+      --border-subtle: #cbd5e1;
+      --border-strong: #94a3b8;
+      --border-glow: rgba(0, 112, 243, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --brand-blue: #0070f3;
+      --brand-blue-glow: rgba(0, 112, 243, 0.15);
+      --status-success: #059669;
+      --status-warning: #d97706;
+      --status-danger: #dc2626;
+
+      --console-bg: #0f172a;
+      --console-text: #f8fafc;
+      --console-border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* HIDE DEFAULT BROWSER NUMBER SPINNER BUTTONS */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-app);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 112, 243, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.04) 0%, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* GLASS TOPBAR */
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 32px; 
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-logo-svg { height: 34px; width: 34px; display: flex; align-items: center; justify-content: center; }
+    .brand-title { display: flex; align-items: center; gap: 8px; }
+    .brand-title h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.3px; color: var(--text-primary); }
+    .brand-tag {
+      font-size: 0.72rem; font-family: var(--font-mono); color: #38bdf8;
+      padding: 3px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25);
+      font-weight: 600;
+    }
+    
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
+      background: var(--bg-subtle); padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border-subtle); font-family: var(--font-mono);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--text-muted); transition: background 0.3s; }
+    .status-dot.active {
+      background-color: var(--status-success);
+      box-shadow: 0 0 12px var(--status-success);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.75; }
+    }
+
+    .controls { display: flex; gap: 8px; align-items: center; }
+    
+    /* BUTTON MICRO-INTERACTIONS */
+    button {
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--font-sans);
+    }
+
+    button:hover {
+      background: var(--bg-surface-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    button.primary {
+      background: var(--brand-blue);
+      color: #ffffff;
+      border-color: var(--brand-blue);
+      box-shadow: 0 0 16px var(--brand-blue-glow);
+    }
+    button.primary:hover {
+      background: #1a7cf3;
+      box-shadow: 0 0 24px rgba(0, 112, 243, 0.4);
+    }
+
+    button.danger {
+      background: rgba(239, 68, 68, 0.1); color: var(--status-danger); border-color: rgba(239, 68, 68, 0.3);
+    }
+    button.danger:hover {
+      background: rgba(239, 68, 68, 0.2); border-color: var(--status-danger); box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+    }
+
+    /* CLEAN LAYOUT CONTAINER */
+    .app-container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 32px 48px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* GLASS CARDS */
+    .metric-card, .panel, .rescue-config {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .metric-card:hover, .panel:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 0 20px rgba(0, 112, 243, 0.08);
+    }
+
+    /* CALIBRATION & DYNAMIC THRESHOLD BAR */
+    .section-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: -8px;
+    }
+    .section-title svg { color: var(--text-muted); }
+    .rescue-config {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      font-size: 0.78rem; color: var(--text-secondary);
+      gap: 16px; font-family: var(--font-mono);
+      flex-wrap: nowrap;
+    }
+    .config-group { display: flex; align-items: center; gap: 16px; flex-wrap: nowrap; flex-shrink: 0; }
+    .config-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+    .config-item svg { color: var(--text-muted); flex-shrink: 0; }
+    
+    .rescue-config input[type=number] {
+      width: 50px; background: var(--bg-app); border: 1px solid var(--border-subtle);
+      color: var(--text-primary); border-radius: 6px;
+      padding: 3px 6px; font-size: 0.82rem; font-family: var(--font-mono); font-weight: 600;
+      outline: none; transition: all 0.2s ease; text-align: center; margin: 0 2px;
+    }
+    .rescue-config input[type=number]:focus {
+      border-color: var(--brand-blue); box-shadow: 0 0 10px var(--brand-blue-glow);
+    }
+
+    .boundary-badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+      border-radius: 20px; font-size: 0.76rem; font-weight: 600; font-family: var(--font-mono);
+      background: var(--bg-subtle); border: 1px solid var(--border-subtle);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .boundary-badge.cold { color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
+    .boundary-badge.hot  { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
+
+    /* METRICS GRID */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+    }
+    @media (max-width: 1100px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px)  { .metrics-grid { grid-template-columns: 1fr; } }
+
+    .metric-card {
+      padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); font-weight: 700; }
+    .metric-value { font-size: 2.1rem; font-weight: 700; font-family: var(--font-mono); letter-spacing: -0.8px; line-height: 1.1; }
+    .metric-unit { font-size: 0.95rem; color: var(--text-secondary); font-weight: 500; }
+    .metric-sub { font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+
+    /* SIMULATOR CONTROLS BAR */
+    .simulator-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 12px 20px; background: var(--bg-surface); border: 1px dashed rgba(56, 189, 248, 0.35);
+      border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 0.78rem;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      flex-wrap: nowrap; overflow-x: auto;
+    }
+    .sim-header {
+      display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0;
+      color: var(--text-secondary);
+    }
+    .sim-tag {
+      font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+      background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .sim-buttons { display: flex; gap: 10px; flex-wrap: nowrap; flex-shrink: 0; }
+    .sim-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; font-size: 0.75rem; font-weight: 600; font-family: var(--font-mono); border-radius: 8px;
+      background: var(--bg-subtle); border: 1px solid var(--border-subtle); color: var(--text-primary);
+      cursor: pointer; white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .sim-btn:hover { background: var(--bg-surface-hover); transform: translateY(-1px); }
+    .sim-btn:active { transform: translateY(1px); }
+    
+    .sim-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .sim-dot.safe { background-color: var(--status-success); box-shadow: 0 0 6px var(--status-success); }
+    .sim-dot.narcotics { background-color: var(--status-danger); box-shadow: 0 0 6px var(--status-danger); }
+    .sim-dot.explosives { background-color: var(--status-warning); box-shadow: 0 0 6px var(--status-warning); }
+    .sim-dot.intruder { background-color: #a855f7; box-shadow: 0 0 6px #a855f7; }
+
+    .sim-btn.btn-safe:hover { border-color: var(--status-success); color: var(--status-success); }
+    .sim-btn.btn-narcotics:hover { border-color: var(--status-danger); color: var(--status-danger); }
+    .sim-btn.btn-explosives:hover { border-color: var(--status-warning); color: var(--status-warning); }
+    .sim-btn.btn-intruder:hover { border-color: #a855f7; color: #c084fc; }
+
+    /* FIXED ASPECT RATIO BOTTOM SPLIT PANE */
+    .split-pane {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 18px;
+      height: 440px;
+      max-height: 440px;
+      width: 100%;
+    }
+    @media (max-width: 1024px) {
+      .split-pane { grid-template-columns: 1fr; height: auto; max-height: none; }
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 440px;
+      max-height: 440px;
+      min-width: 0;
+      width: 100%;
+    }
+    .panel-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.76rem; font-weight: 700; color: var(--text-secondary);
+      display: flex; justify-content: space-between; align-items: center;
+      letter-spacing: 0.5px; text-transform: uppercase; font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+    .chart-wrapper {
+      flex: 1;
+      padding: 14px 16px;
+      position: relative;
+      height: 380px;
+      max-height: 380px;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .chart-wrapper canvas { width: 100% !important; height: 100% !important; max-width: 100%; display: block; }
+    .terminal-output {
+      flex: 1;
+      padding: 14px 16px;
+      overflow-y: auto;
+      background: var(--console-bg);
+      border-top: 1px solid var(--console-border);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.5;
+      height: 380px;
+      max-height: 380px;
+      color: var(--console-text);
+      width: 100%;
+      min-width: 0;
+    }
+    .log-row { margin-bottom: 4px; word-break: break-all; }
+    .log-time { color: var(--text-muted); margin-right: 8px; }
+    .log-info { color: var(--console-text); }
+    .log-data { color: var(--status-success); }
+    .log-warn { color: var(--status-warning); }
+    .log-err  { color: var(--status-danger); }
+    .log-alert { color: var(--status-danger); font-weight: 700; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo-svg">
+        <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 3L4 9V17C4 25.5 10 31.8 18 34C26 31.8 32 25.5 32 17V9L18 3Z" fill="url(#shield_grad)" stroke="#0070f3" stroke-width="2"/>
+          <circle cx="18" cy="17" r="7" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="3 2"/>
+          <circle cx="18" cy="17" r="3" fill="#ef4444"/>
+          <path d="M18 10V14M18 20V24M11 17H15M21 17H25" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"/>
+          <defs>
+            <linearGradient id="shield_grad" x1="18" y1="3" x2="18" y2="34" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#091328"/>
+              <stop offset="1" stop-color="#030712"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <h1>RPF Surveillance Console</h1>
+        <span class="brand-tag">Defense Decision Engine</span>
+      </div>
+      <div class="status-badge" id="connStatusBadge">
+        <div class="status-dot" id="connStatusDot"></div>
+        <span id="connStatusText">Offline</span>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="btnTheme" title="Toggle Light/Dark Mode"></button>
+      <button id="btnExport" title="Export session telemetry to CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Export CSV
+      </button>
+      <button id="btnSimulate" title="Toggle Built-in Telemetry Simulator">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Run Test Simulator
+      </button>
+      <button id="btnConnect" class="primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        Connect ESP32 (115200)
+      </button>
+      <button id="btnDisconnect" class="danger" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+        Disconnect
+      </button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- CALIBRATION & DYNAMIC THRESHOLDS BAR -->
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      <span>Dynamic Threshold Calibration</span>
+    </div>
+    <div class="rescue-config">
+      <div class="config-group">
+        <label class="config-item">
+          <span>COLD_OFFSET:</span>
+          <input type="number" id="inpColdOffset" value="2.0" min="0.5" max="10.0" step="0.5">
+          <span>°C (below ambient)</span>
+        </label>
+        <label class="config-item">
+          <span>HOT_OFFSET:</span>
+          <input type="number" id="inpHotOffset" value="2.5" min="0.5" max="10.0" step="0.5">
+          <span>°C (above ambient)</span>
+        </label>
+      </div>
+      <div class="config-group">
+        <div class="boundary-badge cold">
+          <span>Cold Boundary:</span> <span id="lblColdBoundary">-- °C</span>
+        </div>
+        <div class="boundary-badge hot">
+          <span>Hot Boundary:</span> <span id="lblHotBoundary">-- °C</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEST SIMULATOR PANEL (Hidden by default, toggleable) -->
+    <div class="simulator-bar" id="simPanel" style="display:none;">
+      <div class="sim-header">
+        <span class="sim-tag">Test Suite</span>
+        <span>Inject Sensor Vector:</span>
+      </div>
+      <div class="sim-buttons">
+        <button class="sim-btn btn-safe" onclick="appUI.injectSimulatedPayload('safe')">
+          <span class="sim-dot safe"></span>
+          Safe State
+        </button>
+        <button class="sim-btn btn-narcotics" onclick="appUI.injectSimulatedPayload('narcotics')">
+          <span class="sim-dot narcotics"></span>
+          Narcotics (Vapor + Cold)
+        </button>
+        <button class="sim-btn btn-explosives" onclick="appUI.injectSimulatedPayload('explosives')">
+          <span class="sim-dot explosives"></span>
+          Explosives (Vapor + Warm)
+        </button>
+        <button class="sim-btn btn-intruder" onclick="appUI.injectSimulatedPayload('intruder')">
+          <span class="sim-dot intruder"></span>
+          Human Intruder (Motion + Hot)
+        </button>
+      </div>
+    </div>
+
+    <!-- METRICS GRID -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Chemical Vapor (MQ-2)</div>
+        <div class="metric-value" id="valVapor" style="font-size:1.6rem; color:var(--text-muted);">CLEAN AIR</div>
+        <div class="metric-sub" id="valVaporRaw">Pin 16 (MQ_PIN): HIGH (1)</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ambient Room Temp</div>
+        <div class="metric-value" id="valAmbient">-- <span class="metric-unit">°C</span></div>
+        <div class="metric-sub">MLX90614 Ambient Baseline</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Target IR Temp</div>
+        <div class="metric-value" id="valTarget">-- <span class="metric-unit">°C</span></div>
+        <div class="metric-sub" id="valTargetDelta">Delta vs Ambient: -- °C</div>
+      </div>
+      <div class="metric-card" id="cardStatus">
+        <div class="metric-label">Operational Threat State</div>
+        <div class="metric-value" id="valStatus" style="font-size:1.35rem; color:var(--status-success); line-height: 1.2;">SCANNING SECURE</div>
+        <div class="metric-sub" id="valPriority">Decision Tree Rank: Priority 4 (Safe)</div>
+      </div>
+    </section>
+
+    <!-- BOTTOM SPLIT PANE -->
+    <section class="split-pane">
+      <div class="panel">
+        <div class="panel-header"><span>Live Thermal & Sensor Telemetry Graph</span></div>
+        <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span>ESP32 Serial Output (115200)</span>
+          <button id="btnClearLogs" style="padding:3px 10px;font-size:0.72rem;">Clear</button>
+        </div>
+        <div class="terminal-output" id="terminal"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RPF SURVEILLANCE DASHBOARD MANAGER
+  // ─────────────────────────────────────────────────────────────────────────────
+  class RPFDashboardManager {
+    constructor() {
+      this.recordedData = [];
+      this.maxChartPoints = 35;
+      this.simInterval = null;
+      this.chart = null;
+
+      this.terminal = document.getElementById('terminal');
+      document.getElementById('btnClearLogs').addEventListener('click', () => {
+        if (this.terminal) this.terminal.innerHTML = '';
+      });
+      document.getElementById('btnExport').addEventListener('click', () => this.exportCSV());
+      document.getElementById('btnSimulate').addEventListener('click', () => this.toggleSimPanel());
+
+      document.getElementById('inpColdOffset').addEventListener('input', () => this.recalculateBoundaries());
+      document.getElementById('inpHotOffset').addEventListener('input', () => this.recalculateBoundaries());
+
+      this.initChart();
+      this.initTheme();
+    }
+
+    initChart() {
+      const canvas = document.getElementById('mainChart');
+      if (!canvas) return;
+      if (typeof Chart === 'undefined') {
+        this.log('Chart.js library not loaded. Visual telemetry graph disabled.', 'warn');
+        return;
+      }
+      try {
+        const ctx = canvas.getContext('2d');
+        let targetGradient = ctx.createLinearGradient(0, 0, 0, 320);
+        targetGradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+        targetGradient.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+
+        this.chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              { 
+                label: 'Target Temp (°C)', 
+                borderColor: '#ef4444', 
+                backgroundColor: targetGradient, 
+                borderWidth: 2.5, 
+                pointRadius: 3, 
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#ef4444',
+                tension: 0.35, 
+                fill: true, 
+                data: [], 
+                yAxisID: 'y' 
+              },
+              { 
+                label: 'Ambient Temp (°C)', 
+                borderColor: '#94a3b8', 
+                borderDash: [4,4], 
+                borderWidth: 1.8, 
+                pointRadius: 2, 
+                tension: 0.35,
+                data: [], 
+                yAxisID: 'y' 
+              },
+              { 
+                label: 'Cold Boundary (°C)', 
+                borderColor: '#38bdf8', 
+                borderDash: [2,2], 
+                borderWidth: 1.5, 
+                pointRadius: 0, 
+                tension: 0,
+                data: [], 
+                yAxisID: 'y' 
+              },
+              { 
+                label: 'Hot Boundary (°C)', 
+                borderColor: '#f97316', 
+                borderDash: [2,2], 
+                borderWidth: 1.5, 
+                pointRadius: 0, 
+                tension: 0,
+                data: [], 
+                yAxisID: 'y' 
+              }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { labels: { color: '#64748b', font: { family: 'Geist', size: 12 } } } },
+            scales: {
+              x: { 
+                grid: { color: 'rgba(128, 128, 128, 0.12)' }, 
+                ticks: { color: '#64748b', maxTicksLimit: 12, font: { family: 'Geist Mono' } } 
+              },
+              y: { 
+                type: 'linear', position: 'left', 
+                grid: { color: 'rgba(128, 128, 128, 0.12)' }, 
+                ticks: { color: '#64748b', font: { family: 'Geist Mono' } },
+                grace: '10%',
+                title: { display: true, text: 'Degrees Celsius (°C)', color: '#64748b', font: { size: 11 } } 
+              }
+            }
+          }
+        });
+      } catch (e) {
+        this.log(`Error initializing chart: ${e.message}`, 'err');
+      }
+    }
+
+    initTheme() {
+      this.themeBtn = document.getElementById('btnTheme');
+      this.currentTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', this.currentTheme);
+      this.applyThemeToChart();
+      this.themeBtn.addEventListener('click', () => {
+        this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', this.currentTheme);
+        localStorage.setItem('theme', this.currentTheme);
+        this.applyThemeToChart();
+      });
+    }
+
+    applyThemeToChart() {
+      const sunIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+      const moonIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+      this.themeBtn.innerHTML = this.currentTheme === 'dark' ? `${sunIcon} Light` : `${moonIcon} Dark`;
+      if (this.chart) {
+        const gridColor = this.currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+        const textColor = this.currentTheme === 'dark' ? '#94a3b8' : '#475569';
+        this.chart.options.scales.x.grid.color = gridColor;
+        this.chart.options.scales.x.ticks.color = textColor;
+        this.chart.options.scales.y.grid.color  = gridColor;
+        this.chart.options.scales.y.ticks.color = textColor;
+        this.chart.options.scales.y.title.color = textColor;
+        this.chart.options.plugins.legend.labels.color = textColor;
+        this.chart.update('none');
+      }
+    }
+
+    toggleSimPanel() {
+      const panel = document.getElementById('simPanel');
+      panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    recalculateBoundaries() {
+      const last = this.recordedData[this.recordedData.length - 1];
+      if (last) this.updateMetrics(last);
+    }
+
+    updateMetrics(data) {
+      data.timestamp = new Date().toISOString();
+      this.recordedData.push(data);
+
+      const coldOffset = parseFloat(document.getElementById('inpColdOffset').value) || 2.0;
+      const hotOffset  = parseFloat(document.getElementById('inpHotOffset').value)  || 2.5;
+
+      const ambient = parseFloat(data.ambient_temp !== undefined ? data.ambient_temp : data.ambient);
+      const target  = parseFloat(data.target_temp  !== undefined ? data.target_temp  : data.object);
+      const vaporVal = data.mq2_vapor !== undefined ? data.mq2_vapor : (data.vaporDetected !== undefined ? data.vaporDetected : 1);
+      const pirVal   = data.pir_motion !== undefined ? data.pir_motion : (data.motionDetected !== undefined ? data.motionDetected : 0);
+
+      // MQ-2 trigger state is LOW (0) in the ESP32 setup
+      const isVapor = (vaporVal === 0 || vaporVal === true || vaporVal === "0" || vaporVal === "VAPOR");
+
+      // Dynamic thresholds
+      const coldBoundary = !isNaN(ambient) ? ambient - coldOffset : null;
+      const hotBoundary  = !isNaN(ambient) ? ambient + hotOffset  : null;
+
+      if (coldBoundary !== null) document.getElementById('lblColdBoundary').innerText = `${coldBoundary.toFixed(1)} °C`;
+      if (hotBoundary !== null)  document.getElementById('lblHotBoundary').innerText  = `${hotBoundary.toFixed(1)} °C`;
+
+      // Render Vapor Sensor UI
+      const valVaporEl = document.getElementById('valVapor');
+      if (isVapor) {
+        valVaporEl.innerText = "VAPOR DETECTED";
+        valVaporEl.style.color = "var(--status-danger)";
+        document.getElementById('valVaporRaw').innerText = `Pin 16 (MQ_PIN): LOW (0) - TRIGGERED`;
+      } else {
+        valVaporEl.innerText = "CLEAN AIR";
+        valVaporEl.style.color = "var(--status-success)";
+        document.getElementById('valVaporRaw').innerText = `Pin 16 (MQ_PIN): HIGH (1) - NORMAL`;
+      }
+
+      // Render Ambient & Target Temps
+      if (!isNaN(ambient)) {
+        document.getElementById('valAmbient').innerHTML = `${ambient.toFixed(1)} <span class="metric-unit">°C</span>`;
+      } else {
+        document.getElementById('valAmbient').innerHTML = `-- <span class="metric-unit">°C</span>`;
+      }
+
+      if (!isNaN(target)) {
+        document.getElementById('valTarget').innerHTML = `${target.toFixed(1)} <span class="metric-unit">°C</span>`;
+        if (!isNaN(ambient)) {
+          const diff = target - ambient;
+          const sign = diff >= 0 ? '+' : '';
+          document.getElementById('valTargetDelta').innerText = `Delta vs Ambient: ${sign}${diff.toFixed(1)} °C`;
+        }
+      } else {
+        document.getElementById('valTarget').innerHTML = `-- <span class="metric-unit">°C</span>`;
+        document.getElementById('valTargetDelta').innerText = `Delta vs Ambient: -- °C`;
+      }
+
+      // Dynamic Decision Tree Evaluation (Strict Priority Order)
+      const isCold = !isNaN(target) && coldBoundary !== null && target < coldBoundary;
+      const isHuman = pirVal == 1 && !isNaN(target) && hotBoundary !== null && target > hotBoundary;
+
+      let evaluatedThreat = "NONE";
+      let evaluatedStatus = "SCANNING SECURE";
+      let priorityLabel   = "Priority 4 (Safe State)";
+      let isThreatActive  = false;
+
+      if (isVapor && isCold) {
+        // Condition 1: Vapor + Cold = Narcotics
+        isThreatActive = true;
+        evaluatedThreat = "NARCOTICS DETECTED";
+        evaluatedStatus = "CRITICAL ALERT: NARCOTICS DETECTED";
+        priorityLabel   = "Priority 1 (Vapor + Cold Signature)";
+      } else if (isVapor) {
+        // Condition 2: Vapor + Normal Temp = Explosives
+        isThreatActive = true;
+        evaluatedThreat = "EXPLOSIVES DETECTED";
+        evaluatedStatus = "CRITICAL ALERT: EXPLOSIVES DETECTED";
+        priorityLabel   = "Priority 2 (Vapor Signature)";
+      } else if (isHuman) {
+        // Condition 3: PIR Motion + Hot Temp = Human Intruder
+        isThreatActive = true;
+        evaluatedThreat = "UNAUTHORIZED HUMAN INTRUDER";
+        evaluatedStatus = "CRITICAL ALERT: UNAUTHORIZED HUMAN INTRUDER";
+        priorityLabel   = "Priority 3 (Motion + Hot Signature)";
+      }
+
+      // If status payload is provided by ESP32 JSON string, use it but fallback to evaluated status
+      const statusText = data.status || evaluatedStatus;
+
+      const statusEl = document.getElementById('valStatus');
+      const priorityEl = document.getElementById('valPriority');
+      
+      priorityEl.innerText = priorityLabel;
+
+      if (isThreatActive || statusText.includes('ALERT') || statusText.includes('DETECTED') || statusText.includes('INTRUDER')) {
+        statusEl.innerText = statusText;
+        statusEl.style.color = "var(--status-danger)";
+      } else {
+        statusEl.innerText = "SCANNING SECURE";
+        statusEl.style.color = "var(--status-success)";
+      }
+
+      // Chart Update
+      if (this.chart) {
+        const timeLabel = new Date().toLocaleTimeString([], { hour12: false });
+        this.chart.data.labels.push(timeLabel);
+        this.chart.data.datasets[0].data.push(!isNaN(target) ? target : null);
+        this.chart.data.datasets[1].data.push(!isNaN(ambient) ? ambient : null);
+        this.chart.data.datasets[2].data.push(coldBoundary);
+        this.chart.data.datasets[3].data.push(hotBoundary);
+
+        if (this.chart.data.labels.length > this.maxChartPoints) {
+          this.chart.data.labels.shift();
+          this.chart.data.datasets.forEach(ds => ds.data.shift());
+        }
+        this.chart.update('none');
+      }
+    }
+
+    injectSimulatedPayload(mode) {
+      const ambientTemp = 27.0;
+      let payload = {};
+
+      if (mode === 'safe') {
+        payload = {
+          mq2_vapor: 1, // HIGH = no vapor
+          ambient_temp: ambientTemp,
+          target_temp: 27.2,
+          pir_motion: 0,
+          status: "SCANNING SECURE"
+        };
+        this.log("SIMULATOR: Injected Safe State Payload", "info");
+      } else if (mode === 'narcotics') {
+        payload = {
+          mq2_vapor: 0, // LOW = vapor detected
+          ambient_temp: ambientTemp,
+          target_temp: 24.0, // Cold signature (< 27.0 - 2.0 = 25.0)
+          pir_motion: 0,
+          status: "CRITICAL ALERT: NARCOTICS DETECTED"
+        };
+        this.log("SIMULATOR: Injected Narcotics Vector (Vapor + Cold Signature)", "alert");
+      } else if (mode === 'explosives') {
+        payload = {
+          mq2_vapor: 0, // LOW = vapor detected
+          ambient_temp: ambientTemp,
+          target_temp: 27.5, // Warm/Normal temp (>= 25.0)
+          pir_motion: 0,
+          status: "CRITICAL ALERT: EXPLOSIVES DETECTED"
+        };
+        this.log("SIMULATOR: Injected Explosives Vector (Vapor + Ambient Temp)", "alert");
+      } else if (mode === 'intruder') {
+        payload = {
+          mq2_vapor: 1, // HIGH = no vapor
+          ambient_temp: ambientTemp,
+          target_temp: 36.8, // Hot signature (> 27.0 + 2.5 = 29.5)
+          pir_motion: 1, // Motion detected
+          status: "CRITICAL ALERT: UNAUTHORIZED HUMAN INTRUDER"
+        };
+        this.log("SIMULATOR: Injected Human Intruder Vector (PIR Motion + Thermal Target)", "alert");
+      }
+
+      const jsonString = JSON.stringify(payload);
+      this.log(jsonString, "data");
+      this.updateMetrics(payload);
+    }
+
+    log(message, level = 'info') {
+      const time = new Date().toLocaleTimeString([], { hour12: false });
+      const div = document.createElement('div');
+      div.className = 'log-row';
+      div.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${level}">${message}</span>`;
+      if (this.terminal) {
+        this.terminal.appendChild(div);
+        this.terminal.scrollTop = this.terminal.scrollHeight;
+        if (this.terminal.childElementCount > 200) this.terminal.removeChild(this.terminal.firstChild);
+      }
+    }
+
+    setConnectionState(isConnected) {
+      document.getElementById('connStatusText').innerText = isConnected ? 'Connected (115200)' : 'Offline';
+      document.getElementById('connStatusDot').className  = isConnected ? 'status-dot active' : 'status-dot';
+      document.getElementById('btnConnect').style.display    = isConnected ? 'none' : 'flex';
+      document.getElementById('btnDisconnect').style.display = isConnected ? 'flex' : 'none';
+    }
+
+    exportCSV() {
+      if (this.recordedData.length === 0) return alert('No telemetry recorded in current session.');
+      const headers = ['timestamp','mq2_vapor','ambient_temp','target_temp','status'];
+      const rows = [headers.join(',')];
+      for (const row of this.recordedData) {
+        rows.push(headers.map(h => `"${row[h] !== undefined ? row[h] : ''}"`).join(','));
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
+      a.download = `rpf_telemetry_${Date.now()}.csv`;
+      a.click();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SERIAL COMMUNICATIONS MANAGER (115200 BAUD)
+  // ─────────────────────────────────────────────────────────────────────────────
+  class SerialManager {
+    constructor(uiManager) {
+      this.ui = uiManager;
+      this.port = null;
+      this.reader = null;
+      this.keepReading = false;
+      document.getElementById('btnConnect').addEventListener('click', () => this.connect());
+      document.getElementById('btnDisconnect').addEventListener('click', () => this.disconnect());
+    }
+
+    async connect() {
+      if (!('serial' in navigator)) {
+        const msg = 'Web Serial API is not supported in this browser. Please use Google Chrome or Microsoft Edge.';
+        this.ui.log(`ERROR: ${msg}`, 'err');
+        alert(msg);
+        return;
+      }
+      try {
+        this.port = await navigator.serial.requestPort();
+        await this.port.open({ baudRate: 115200 });
+        this.ui.setConnectionState(true);
+        this.ui.log('Serial port opened at 115200 baud.', 'info');
+        this.keepReading = true;
+        this.readLoop();
+      } catch (err) {
+        this.ui.log(`Connection failed: ${err.message}`, 'err');
+      }
+    }
+
+    async disconnect() {
+      this.keepReading = false;
+      if (this.reader) await this.reader.cancel();
+      if (this.port)   { await this.port.close(); this.port = null; }
+      this.ui.setConnectionState(false);
+      this.ui.log('Disconnected from serial port.', 'warn');
+    }
+
+    async readLoop() {
+      const textDecoder = new TextDecoderStream();
+      this.port.readable.pipeTo(textDecoder.writable);
+      this.reader = textDecoder.readable.getReader();
+      let buffer = '';
+      try {
+        while (this.keepReading) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          buffer += value;
+          let lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            if (line.startsWith('{') && line.endsWith('}')) {
+              const sanitizedLine = line
+                .replace(/:\s*-?nan\b/gi, ':null')
+                .replace(/:\s*-?infinity\b/gi, ':null');
+              try {
+                const payload = JSON.parse(sanitizedLine);
+                this.ui.log(line, 'data');
+                this.ui.updateMetrics(payload);
+              } catch (e) {
+                this.ui.log(`JSON parse error: ${line}`, 'err');
+              }
+            } else {
+              this.ui.log(line, 'info');
+            }
+          }
+        }
+      } catch (error) {
+        this.ui.log(`Read error: ${error.message}`, 'err');
+      } finally {
+        this.reader.releaseLock();
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // INITIALIZATION & BOOT LOGIC
+  // ─────────────────────────────────────────────────────────────────────────────
+  const appUI     = new RPFDashboardManager();
+  const appSerial = new SerialManager(appUI);
+
+  appUI.log('RPF Surveillance Prototype Telemetry Console initialized.', 'info');
+  appUI.log('Ready to connect ESP32 at 115200 baud or run Test Simulator.', 'info');
+  </script>
+</body>
+</html>
