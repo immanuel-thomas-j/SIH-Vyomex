@@ -1,0 +1,133 @@
+file,column_name,data_type,unit,description,range,notes
+raw_timeseries.csv,timestamp,float,seconds,Relative elapsed time within the screening event window sampled at 10 Hz,0.0 to 30.0,Starts at 0.0s for each event; step is 0.1s (100 to 300 samples per window)
+raw_timeseries.csv,event_id,string,dimensionless,Unique identifier for the screening event window,EVT_0001 to EVT_2000,Primary key identifying contiguous 10-30 second screening interactions
+raw_timeseries.csv,session_id,string,dimensionless,Operational screening session / deployment shift identifier,SES_001 to SES_050,Grouping key used for session-level splitting to prevent train/test data leakage
+raw_timeseries.csv,device_id,string,dimensionless,Physical edge screening unit hardware node identifier,DEV_01 to DEV_10,Specific NARCOSCAN deployment edge device generating telemetry
+raw_timeseries.csv,platform_id,string,dimensionless,Railway station platform or checkpoint location identifier,PF_01 to PF_05,Categorical station checkpoint location tag
+raw_timeseries.csv,latitude,float,degrees_N,Simulated GPS latitude of railway station deployment node,28.5000 to 28.7000,Simulated spatial coordinate with station-level micro-dither
+raw_timeseries.csv,longitude,float,degrees_E,Simulated GPS longitude of railway station deployment node,77.1000 to 77.3000,Simulated spatial coordinate with station-level micro-dither
+raw_timeseries.csv,mq1,float,ppm_equivalent,Metal-oxide semiconductor gas sensor 1 response (broad hydrocarbon / smoke surrogate),50.0 to 1000.0,Baseline ~150-250 ppm_eq; responsive to broad volatile hydrocarbons and smoke
+raw_timeseries.csv,mq2,float,ppm_equivalent,Metal-oxide semiconductor gas sensor 2 response (combustible gas / LPG surrogate),100.0 to 1200.0,Baseline ~250-350 ppm_eq; moderate cross-sensitivity to environmental moisture
+raw_timeseries.csv,mq3,float,ppm_equivalent,Metal-oxide semiconductor gas sensor 3 response (alcohol / volatile solvent surrogate),20.0 to 800.0,"Baseline ~50-120 ppm_eq; sharp sensitivity to hand sanitizers, perfumes, and solvent diluents"
+raw_timeseries.csv,mq4,float,ppm_equivalent,Metal-oxide semiconductor gas sensor 4 response (nitrogenous organic / air quality surrogate),40.0 to 900.0,Baseline ~100-200 ppm_eq; responsive to amine/ammonia-like synthetic target profiles
+raw_timeseries.csv,target_temperature_C,float,celsius,Non-contact infrared optical thermopile reading of screened subject or baggage surface,15.0 to 45.0,"Captures luggage surface temperature, body thermal emission, or exothermic reaction heat"
+raw_timeseries.csv,ambient_temperature_C,float,celsius,Internal ambient temperature inside the screening portal chamber,15.0 to 42.0,Tracks portal environmental baseline temperature with diurnal drift
+raw_timeseries.csv,delta_temperature_C,float,celsius,Differential temperature contrast (target_temperature_C minus ambient_temperature_C),-10.0 to +15.0,Critical thermal signature; positive values indicate body heat or exothermic anomalies
+raw_timeseries.csv,humidity_percent,float,percent,Relative atmospheric humidity within the screening portal enclosure,20.0 to 95.0,Modulates MOS surface conductivity; essential for environmental baseline compensation
+raw_timeseries.csv,atmospheric_pressure_hPa,float,hPa,Barometric atmospheric pressure inside the screening portal,950.0 to 1050.0,"Monitors chamber ventilation drafts, passing train air displacement, and elevation baseline"
+raw_timeseries.csv,pir_motion,binary,boolean,Passive Infrared (PIR) motion detection state within screening aperture,0 or 1,"Binary state: 1 when active human movement is detected in the focal zone, 0 otherwise"
+raw_timeseries.csv,proximity_cm,float,cm,Ultrasonic / ToF rangefinder distance to target object or passenger,5.0 to 200.0,Physical proximity; active screening focal window is gated when proximity < 80 cm
+raw_timeseries.csv,motion_count,int,count,Cumulative motion trigger pulses registered within current screening event window,0 to 100,Monotonically non-decreasing counter per screening event window
+raw_timeseries.csv,label,string,dimensionless,Ground truth screening risk classification target label,"NORMAL, UNKNOWN, HIGH_RISK_SCREENING_EVENT","Supervised classification target (60% NORMAL, 25% UNKNOWN, 15% HIGH_RISK_SCREENING_EVENT)"
+raw_timeseries.csv,synthetic_condition,string,dimensionless,Controlled generative simulation regime category,"CLEAN_PASS, VOLATILE_INTERFERENCE, THERMAL_ANOMALY, MULTISENSOR_THREAT, PACKAGED_CONCEALMENT, SENSOR_DRIFT",Underlying generative state governing sensor anomaly parameter injection
+raw_timeseries.csv,anomaly_strength,float,dimensionless,Injected synthetic anomaly magnitude scalar,0.0 to 1.0,"0.0 for clean nominal transit, up to 1.0 for acute multi-sensor signature deviation"
+raw_timeseries.csv,environmental_condition,string,dimensionless,Simulated environmental / microclimatic profile state,"NOMINAL_INDOOR, HIGH_HUMIDITY_MONSOON, HOT_ARID, DRAFTY_PLATFORM","Drives background drift parameters, noise amplitude, and sensor baseline offset"
+raw_timeseries.csv,simulated_event_type,string,dimensionless,Detailed simulation narrative archetype classification,"CLEAN_TRANSIT, PERFUME_HAND_SANITIZER, COLD_BEVERAGE, CONCEALED_VOLATILE, ORGANIC_SOLVENT_EXPOSURE, SENSOR_OCCLUSION",Domain archetype mapping to the higher-level 3-class label schema
+feature_windows.csv,event_id,string,dimensionless,Unique identifier for the screening event window,EVT_0001 to EVT_2000,Join key matching raw_timeseries.csv event windows; primary key for feature dataset
+feature_windows.csv,session_id,string,dimensionless,Operational screening session / shift identifier,SES_001 to SES_050,Group identifier for StratifiedGroupKFold splitting to prevent cross-session leakage
+feature_windows.csv,device_id,string,dimensionless,Physical edge screening unit hardware node identifier,DEV_01 to DEV_10,Screening hardware unit generating the source event
+feature_windows.csv,label,string,dimensionless,Ground truth screening risk classification target,"NORMAL, UNKNOWN, HIGH_RISK_SCREENING_EVENT","Supervised classification target: NORMAL (60%), UNKNOWN (25%), HIGH_RISK_SCREENING_EVENT (15%)"
+feature_windows.csv,synthetic_condition,string,dimensionless,Controlled generative simulation regime category,"CLEAN_PASS, VOLATILE_INTERFERENCE, THERMAL_ANOMALY, MULTISENSOR_THREAT, PACKAGED_CONCEALMENT, SENSOR_DRIFT",Generator regime metadata retained for diagnostic validation
+feature_windows.csv,anomaly_strength,float,dimensionless,Window-level synthetic anomaly intensity coefficient,0.0 to 1.0,Continuous scalar severity score injected during simulation
+feature_windows.csv,environmental_condition,string,dimensionless,Simulated environmental profile category during window capture,"NOMINAL_INDOOR, HIGH_HUMIDITY_MONSOON, HOT_ARID, DRAFTY_PLATFORM",Contextual microclimate metadata
+feature_windows.csv,simulated_event_type,string,dimensionless,Granular simulation archetype classification,"CLEAN_TRANSIT, PERFUME_HAND_SANITIZER, COLD_BEVERAGE, CONCEALED_VOLATILE, ORGANIC_SOLVENT_EXPOSURE, SENSOR_OCCLUSION",Simulation scenario archetype
+feature_windows.csv,mq1_mean,float,ppm_equivalent,Arithmetic mean of MQ1 sensor response over event window,20.0 to 1200.0,Window central tendency
+feature_windows.csv,mq1_median,float,ppm_equivalent,Median value of MQ1 sensor response over event window,20.0 to 1200.0,Robust central tendency against impulsive noise spikes
+feature_windows.csv,mq1_min,float,ppm_equivalent,Minimum value of MQ1 sensor response observed during event window,15.0 to 1100.0,Lower signal envelope bound
+feature_windows.csv,mq1_max,float,ppm_equivalent,Maximum value of MQ1 sensor response observed during event window,25.0 to 1500.0,Upper signal peak bound
+feature_windows.csv,mq1_std,float,ppm_equivalent,Standard deviation of MQ1 sensor response over event window,0.5 to 300.0,Measure of signal dispersion and transient fluctuation
+feature_windows.csv,mq1_peak_amplitude,float,ppm_equivalent,Peak excursion amplitude above baseline (MQ1_max minus MQ1_baseline),0.0 to 1200.0,Transient response amplitude above estimated steady-state baseline
+feature_windows.csv,mq1_baseline,float,ppm_equivalent,Estimated steady-state baseline response for MQ1 sensor (mean of initial 10 samples),20.0 to 500.0,Pre-event reference conductance level before subject engagement
+feature_windows.csv,mq1_max_deviation,float,ppm_equivalent,Maximum absolute deviation from window mean for MQ1 sensor,1.0 to 800.0,Captures extreme single-point excursions within the window
+feature_windows.csv,mq1_rise_rate,float,ppm_equivalent/s,Maximum rate of signal rise (dPPM/dt) during plume encounter phase,0.0 to 250.0,Maximum positive finite-difference gradient; steep slopes signify direct plume impingement
+feature_windows.csv,mq1_fall_rate,float,ppm_equivalent/s,Maximum rate of signal fall during desorptive clearance phase,0.0 to 150.0,Maximum negative finite-difference gradient; reflects sensor chamber clearing/washout
+feature_windows.csv,mq1_auc,float,ppm_equivalent*s,Area Under the Curve (trapezoidal numerical integration over window time),500.0 to 35000.0,Integrated exposure dosage over the screening interaction
+feature_windows.csv,mq1_response_duration,float,seconds,Duration of time during which MQ1 remained >20% above baseline,0.0 to 30.0,Temporal persistence of the chemical vapor plume
+feature_windows.csv,mq1_recovery_time,float,seconds,Elapsed time from peak amplitude until signal recovers to within 10% of baseline,0.0 to 25.0,Sensor desorptive clearance latency
+feature_windows.csv,mq1_time_to_peak,float,seconds,Elapsed time from window start to maximum peak amplitude,0.1 to 25.0,Arrival latency of peak vapor concentration
+feature_windows.csv,mq1_dominant_freq,float,Hz,Dominant spectral frequency peak in FFT power spectrum (0 to 5 Hz),0.0 to 5.0,Primary oscillatory or drift component (Nyquist limit 5 Hz at 10 Hz sampling)
+feature_windows.csv,mq1_spectral_energy,float,(ppm_equivalent)^2,Total power spectral density energy across all FFT bins,10.0 to 1e7,Overall frequency-domain power of the sensor signal
+feature_windows.csv,mq1_low_freq_energy,float,(ppm_equivalent)^2,Spectral energy in low-frequency band (0.0 to 1.0 Hz),10.0 to 1e7,Reflects slow chemical plume accumulation and baseline thermal drift
+feature_windows.csv,mq1_high_freq_energy,float,(ppm_equivalent)^2,Spectral energy in high-frequency band (1.0 to 5.0 Hz),0.1 to 1e5,"Reflects mechanical air turbulence, ventilation drafts, and electrical noise"
+feature_windows.csv,mq1_spectral_entropy,float,nats,Normalized Shannon spectral entropy of FFT power distribution,0.1 to 3.5,"Signal complexity/flatness; high entropy indicates noise, low entropy indicates structured transient"
+feature_windows.csv,mq2_mean,float,ppm_equivalent,Arithmetic mean of MQ2 sensor response over event window,20.0 to 1200.0,Window central tendency
+feature_windows.csv,mq2_median,float,ppm_equivalent,Median value of MQ2 sensor response over event window,20.0 to 1200.0,Robust central tendency against impulsive noise spikes
+feature_windows.csv,mq2_min,float,ppm_equivalent,Minimum value of MQ2 sensor response observed during event window,15.0 to 1100.0,Lower signal envelope bound
+feature_windows.csv,mq2_max,float,ppm_equivalent,Maximum value of MQ2 sensor response observed during event window,25.0 to 1500.0,Upper signal peak bound
+feature_windows.csv,mq2_std,float,ppm_equivalent,Standard deviation of MQ2 sensor response over event window,0.5 to 300.0,Measure of signal dispersion and transient fluctuation
+feature_windows.csv,mq2_peak_amplitude,float,ppm_equivalent,Peak excursion amplitude above baseline (MQ2_max minus MQ2_baseline),0.0 to 1200.0,Transient response amplitude above estimated steady-state baseline
+feature_windows.csv,mq2_baseline,float,ppm_equivalent,Estimated steady-state baseline response for MQ2 sensor (mean of initial 10 samples),20.0 to 500.0,Pre-event reference conductance level before subject engagement
+feature_windows.csv,mq2_max_deviation,float,ppm_equivalent,Maximum absolute deviation from window mean for MQ2 sensor,1.0 to 800.0,Captures extreme single-point excursions within the window
+feature_windows.csv,mq2_rise_rate,float,ppm_equivalent/s,Maximum rate of signal rise (dPPM/dt) during plume encounter phase,0.0 to 250.0,Maximum positive finite-difference gradient; steep slopes signify direct plume impingement
+feature_windows.csv,mq2_fall_rate,float,ppm_equivalent/s,Maximum rate of signal fall during desorptive clearance phase,0.0 to 150.0,Maximum negative finite-difference gradient; reflects sensor chamber clearing/washout
+feature_windows.csv,mq2_auc,float,ppm_equivalent*s,Area Under the Curve (trapezoidal numerical integration over window time),500.0 to 35000.0,Integrated exposure dosage over the screening interaction
+feature_windows.csv,mq2_response_duration,float,seconds,Duration of time during which MQ2 remained >20% above baseline,0.0 to 30.0,Temporal persistence of the chemical vapor plume
+feature_windows.csv,mq2_recovery_time,float,seconds,Elapsed time from peak amplitude until signal recovers to within 10% of baseline,0.0 to 25.0,Sensor desorptive clearance latency
+feature_windows.csv,mq2_time_to_peak,float,seconds,Elapsed time from window start to maximum peak amplitude,0.1 to 25.0,Arrival latency of peak vapor concentration
+feature_windows.csv,mq2_dominant_freq,float,Hz,Dominant spectral frequency peak in FFT power spectrum (0 to 5 Hz),0.0 to 5.0,Primary oscillatory or drift component (Nyquist limit 5 Hz at 10 Hz sampling)
+feature_windows.csv,mq2_spectral_energy,float,(ppm_equivalent)^2,Total power spectral density energy across all FFT bins,10.0 to 1e7,Overall frequency-domain power of the sensor signal
+feature_windows.csv,mq2_low_freq_energy,float,(ppm_equivalent)^2,Spectral energy in low-frequency band (0.0 to 1.0 Hz),10.0 to 1e7,Reflects slow chemical plume accumulation and baseline thermal drift
+feature_windows.csv,mq2_high_freq_energy,float,(ppm_equivalent)^2,Spectral energy in high-frequency band (1.0 to 5.0 Hz),0.1 to 1e5,"Reflects mechanical air turbulence, ventilation drafts, and electrical noise"
+feature_windows.csv,mq2_spectral_entropy,float,nats,Normalized Shannon spectral entropy of FFT power distribution,0.1 to 3.5,"Signal complexity/flatness; high entropy indicates noise, low entropy indicates structured transient"
+feature_windows.csv,mq3_mean,float,ppm_equivalent,Arithmetic mean of MQ3 sensor response over event window,20.0 to 1200.0,Window central tendency
+feature_windows.csv,mq3_median,float,ppm_equivalent,Median value of MQ3 sensor response over event window,20.0 to 1200.0,Robust central tendency against impulsive noise spikes
+feature_windows.csv,mq3_min,float,ppm_equivalent,Minimum value of MQ3 sensor response observed during event window,15.0 to 1100.0,Lower signal envelope bound
+feature_windows.csv,mq3_max,float,ppm_equivalent,Maximum value of MQ3 sensor response observed during event window,25.0 to 1500.0,Upper signal peak bound
+feature_windows.csv,mq3_std,float,ppm_equivalent,Standard deviation of MQ3 sensor response over event window,0.5 to 300.0,Measure of signal dispersion and transient fluctuation
+feature_windows.csv,mq3_peak_amplitude,float,ppm_equivalent,Peak excursion amplitude above baseline (MQ3_max minus MQ3_baseline),0.0 to 1200.0,Transient response amplitude above estimated steady-state baseline
+feature_windows.csv,mq3_baseline,float,ppm_equivalent,Estimated steady-state baseline response for MQ3 sensor (mean of initial 10 samples),20.0 to 500.0,Pre-event reference conductance level before subject engagement
+feature_windows.csv,mq3_max_deviation,float,ppm_equivalent,Maximum absolute deviation from window mean for MQ3 sensor,1.0 to 800.0,Captures extreme single-point excursions within the window
+feature_windows.csv,mq3_rise_rate,float,ppm_equivalent/s,Maximum rate of signal rise (dPPM/dt) during plume encounter phase,0.0 to 250.0,Maximum positive finite-difference gradient; steep slopes signify direct plume impingement
+feature_windows.csv,mq3_fall_rate,float,ppm_equivalent/s,Maximum rate of signal fall during desorptive clearance phase,0.0 to 150.0,Maximum negative finite-difference gradient; reflects sensor chamber clearing/washout
+feature_windows.csv,mq3_auc,float,ppm_equivalent*s,Area Under the Curve (trapezoidal numerical integration over window time),500.0 to 35000.0,Integrated exposure dosage over the screening interaction
+feature_windows.csv,mq3_response_duration,float,seconds,Duration of time during which MQ3 remained >20% above baseline,0.0 to 30.0,Temporal persistence of the chemical vapor plume
+feature_windows.csv,mq3_recovery_time,float,seconds,Elapsed time from peak amplitude until signal recovers to within 10% of baseline,0.0 to 25.0,Sensor desorptive clearance latency
+feature_windows.csv,mq3_time_to_peak,float,seconds,Elapsed time from window start to maximum peak amplitude,0.1 to 25.0,Arrival latency of peak vapor concentration
+feature_windows.csv,mq3_dominant_freq,float,Hz,Dominant spectral frequency peak in FFT power spectrum (0 to 5 Hz),0.0 to 5.0,Primary oscillatory or drift component (Nyquist limit 5 Hz at 10 Hz sampling)
+feature_windows.csv,mq3_spectral_energy,float,(ppm_equivalent)^2,Total power spectral density energy across all FFT bins,10.0 to 1e7,Overall frequency-domain power of the sensor signal
+feature_windows.csv,mq3_low_freq_energy,float,(ppm_equivalent)^2,Spectral energy in low-frequency band (0.0 to 1.0 Hz),10.0 to 1e7,Reflects slow chemical plume accumulation and baseline thermal drift
+feature_windows.csv,mq3_high_freq_energy,float,(ppm_equivalent)^2,Spectral energy in high-frequency band (1.0 to 5.0 Hz),0.1 to 1e5,"Reflects mechanical air turbulence, ventilation drafts, and electrical noise"
+feature_windows.csv,mq3_spectral_entropy,float,nats,Normalized Shannon spectral entropy of FFT power distribution,0.1 to 3.5,"Signal complexity/flatness; high entropy indicates noise, low entropy indicates structured transient"
+feature_windows.csv,mq4_mean,float,ppm_equivalent,Arithmetic mean of MQ4 sensor response over event window,20.0 to 1200.0,Window central tendency
+feature_windows.csv,mq4_median,float,ppm_equivalent,Median value of MQ4 sensor response over event window,20.0 to 1200.0,Robust central tendency against impulsive noise spikes
+feature_windows.csv,mq4_min,float,ppm_equivalent,Minimum value of MQ4 sensor response observed during event window,15.0 to 1100.0,Lower signal envelope bound
+feature_windows.csv,mq4_max,float,ppm_equivalent,Maximum value of MQ4 sensor response observed during event window,25.0 to 1500.0,Upper signal peak bound
+feature_windows.csv,mq4_std,float,ppm_equivalent,Standard deviation of MQ4 sensor response over event window,0.5 to 300.0,Measure of signal dispersion and transient fluctuation
+feature_windows.csv,mq4_peak_amplitude,float,ppm_equivalent,Peak excursion amplitude above baseline (MQ4_max minus MQ4_baseline),0.0 to 1200.0,Transient response amplitude above estimated steady-state baseline
+feature_windows.csv,mq4_baseline,float,ppm_equivalent,Estimated steady-state baseline response for MQ4 sensor (mean of initial 10 samples),20.0 to 500.0,Pre-event reference conductance level before subject engagement
+feature_windows.csv,mq4_max_deviation,float,ppm_equivalent,Maximum absolute deviation from window mean for MQ4 sensor,1.0 to 800.0,Captures extreme single-point excursions within the window
+feature_windows.csv,mq4_rise_rate,float,ppm_equivalent/s,Maximum rate of signal rise (dPPM/dt) during plume encounter phase,0.0 to 250.0,Maximum positive finite-difference gradient; steep slopes signify direct plume impingement
+feature_windows.csv,mq4_fall_rate,float,ppm_equivalent/s,Maximum rate of signal fall during desorptive clearance phase,0.0 to 150.0,Maximum negative finite-difference gradient; reflects sensor chamber clearing/washout
+feature_windows.csv,mq4_auc,float,ppm_equivalent*s,Area Under the Curve (trapezoidal numerical integration over window time),500.0 to 35000.0,Integrated exposure dosage over the screening interaction
+feature_windows.csv,mq4_response_duration,float,seconds,Duration of time during which MQ4 remained >20% above baseline,0.0 to 30.0,Temporal persistence of the chemical vapor plume
+feature_windows.csv,mq4_recovery_time,float,seconds,Elapsed time from peak amplitude until signal recovers to within 10% of baseline,0.0 to 25.0,Sensor desorptive clearance latency
+feature_windows.csv,mq4_time_to_peak,float,seconds,Elapsed time from window start to maximum peak amplitude,0.1 to 25.0,Arrival latency of peak vapor concentration
+feature_windows.csv,mq4_dominant_freq,float,Hz,Dominant spectral frequency peak in FFT power spectrum (0 to 5 Hz),0.0 to 5.0,Primary oscillatory or drift component (Nyquist limit 5 Hz at 10 Hz sampling)
+feature_windows.csv,mq4_spectral_energy,float,(ppm_equivalent)^2,Total power spectral density energy across all FFT bins,10.0 to 1e7,Overall frequency-domain power of the sensor signal
+feature_windows.csv,mq4_low_freq_energy,float,(ppm_equivalent)^2,Spectral energy in low-frequency band (0.0 to 1.0 Hz),10.0 to 1e7,Reflects slow chemical plume accumulation and baseline thermal drift
+feature_windows.csv,mq4_high_freq_energy,float,(ppm_equivalent)^2,Spectral energy in high-frequency band (1.0 to 5.0 Hz),0.1 to 1e5,"Reflects mechanical air turbulence, ventilation drafts, and electrical noise"
+feature_windows.csv,mq4_spectral_entropy,float,nats,Normalized Shannon spectral entropy of FFT power distribution,0.1 to 3.5,"Signal complexity/flatness; high entropy indicates noise, low entropy indicates structured transient"
+feature_windows.csv,target_temp_mean,float,celsius,Mean target infrared surface temperature over window,15.0 to 45.0,Screened object or passenger average surface temperature
+feature_windows.csv,target_temp_max,float,celsius,Maximum target infrared surface temperature over window,16.0 to 48.0,Peak localized surface temperature detected
+feature_windows.csv,target_temp_min,float,celsius,Minimum target infrared surface temperature over window,14.0 to 43.0,Minimum surface temperature detected
+feature_windows.csv,deltaT_mean,float,celsius,Mean temperature contrast (target minus ambient) across window,-5.0 to 12.0,Average thermal elevation relative to station ambient
+feature_windows.csv,deltaT_max,float,celsius,Maximum temperature contrast observed across window,-3.0 to 15.0,Peak thermal differential excursion
+feature_windows.csv,deltaT_std,float,celsius,Standard deviation of delta temperature across window,0.05 to 4.0,Thermal gradient fluctuation across screened subject
+feature_windows.csv,deltaT_rate_of_change,float,celsius/s,Maximum rate of change in delta temperature over window,-5.0 to 5.0,Thermal transition velocity as subject traverses sensing zone
+feature_windows.csv,env_temp_mean,float,celsius,Mean ambient portal temperature across window,15.0 to 42.0,Macro-environmental thermal baseline during screening
+feature_windows.csv,env_temp_range,float,celsius,Difference between max and min ambient temperature in window,0.0 to 3.0,Thermal stability of screening chamber over the event window
+feature_windows.csv,humidity_mean,float,percent,Mean relative humidity over window,20.0 to 95.0,Relative humidity for MOS conductance compensation
+feature_windows.csv,humidity_range,float,percent,Difference between max and min humidity in window,0.0 to 8.0,Short-term moisture variability in the screening portal
+feature_windows.csv,pressure_mean,float,hPa,Mean barometric pressure over window,950.0 to 1050.0,Atmospheric baseline pressure
+feature_windows.csv,pressure_range,float,hPa,Difference between max and min pressure in window,0.0 to 4.0,Barometric air draft fluctuation from passing trains or ventilation
+feature_windows.csv,total_motion_count,int,count,Cumulative count of PIR motion trigger transitions in window,0 to 100,Total movement events registered by PIR sensor
+feature_windows.csv,pct_window_motion,float,percent,Percentage of time window where PIR motion was actively asserted (1),0.0 to 100.0,Duty cycle of physical occupancy in screening portal
+feature_windows.csv,proximity_min,float,cm,Closest distance of subject/luggage to screening aperture,5.0 to 150.0,Closest encounter distance; confirms subject presence
+feature_windows.csv,proximity_mean,float,cm,Average proximity distance across window,10.0 to 180.0,Mean subject distance during screening phase
+feature_windows.csv,gas_correlation,float,dimensionless,Average pairwise Pearson correlation coefficient among MQ1-MQ4 signals,-1.0 to 1.0,Quantifies coherent multi-sensor co-activation across chemical array
+feature_windows.csv,max_gas_response,float,ppm_equivalent,Maximum peak amplitude observed across any of the four gas sensors,0.0 to 1200.0,Array-wide maximal response excursion
+feature_windows.csv,mean_gas_response,float,ppm_equivalent,Average peak amplitude across all four gas sensors,0.0 to 900.0,Array-wide average response intensity
+feature_windows.csv,gas_response_variance,float,(ppm_equivalent)^2,Variance of peak amplitudes across the four gas sensors,0.0 to 2.5e5,Array selectivity profile diversity across sensor types
+feature_windows.csv,chemical_thermal_agreement,float,dimensionless,Normalized cross-modal correlation between mean gas response and deltaT,-1.0 to 1.0,High co-activation indicates coupled chemical and thermal anomaly signatures
+feature_windows.csv,n_sensors_above_baseline,int,count,Number of MQ gas sensors exceeding 3-sigma detection threshold above baseline,0 to 4,Array consensus count; higher consensus reduces single-sensor false alarms
+feature_windows.csv,multimodal_anomaly_score,float,dimensionless,"Composite heuristic risk score fusing chemical, thermal, and proximity signals",0.0 to 1.0,"Integrated pre-classification anomaly index; combines gas, thermal, and proximity cues"
